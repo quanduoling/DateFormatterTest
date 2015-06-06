@@ -5,39 +5,48 @@ import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.function.IntFunction;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 
 public class DateFormatterTest {
 
-    class SimpleDateFormatterThreadTest {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+    class SimpleDateFormatThreadTest {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-        public void exec(int end) {
-            IntStream.range(0, end)
+        public void exec(int count) {
+            IntStream.range(0, count)
             .mapToObj(i -> {
                 Calendar cal = Calendar.getInstance();
+                cal.add(Calendar.YEAR, i);
+                cal.add(Calendar.MONTH, i);
                 cal.add(Calendar.DATE, i);
+                cal.add(Calendar.HOUR_OF_DAY, i);
+                cal.add(Calendar.MINUTE, i);
+                cal.add(Calendar.SECOND, i);
                 return cal.getTime();
             })
+            .map(d -> d + ":" + sdf.format(d))
             .parallel()
-            .forEach(d -> {
-                System.out.println(d + ":" + sdf.format(d));
-            });
+            .forEach(System.out::println);
         }
     }
 
     class DateTimeFormatterThreadTest {
-        DateTimeFormatter df = DateTimeFormatter.ISO_LOCAL_DATE;
+        DateTimeFormatter df = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss");
 
-        public void exec(int end) {
-            IntStream.range(0, end)
-            .mapToObj(i -> LocalDateTime.now().plusDays(i))
+        public void exec(int count) {
+            IntStream.range(0, count)
+            .mapToObj(i -> LocalDateTime.now()
+				.plusYears(i)
+				.plusMonths(i)
+				.plusDays(i)
+				.plusHours(i)
+				.plusMinutes(i)
+				.plusSeconds(i)
+			)
+            .map(d -> d + ":" + df.format(d))
             .parallel()
-            .forEach(d -> {
-                System.out.println(d + ":" + df.format(d));
-            });
+            .forEach(System.out::println);
         }
     }
 
@@ -55,24 +64,24 @@ public class DateFormatterTest {
             start();
             IntStream.range(0, repeat)
             .mapToObj(run())
-            .collect(Collectors.toList());
+            .forEach(x -> {});
             end();
         }
         abstract IntFunction<String> run();
     }
 
-    class SimpleDateFormatterSpeedTest extends SpeedTest {
+    class SimpleDateFormatSpeedTest extends SpeedTest {
         @Override
         IntFunction<String> run() {
             return i -> {
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                 return sdf.format(new Date());
             };
         }
     }
 
     class DateTimeFormatterSpeedTest extends SpeedTest {
-        DateTimeFormatter df = DateTimeFormatter.ISO_LOCAL_DATE;
+        DateTimeFormatter df = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss");
         @Override
         IntFunction<String> run() {
             return i -> df.format(LocalDateTime.now());
@@ -82,7 +91,7 @@ public class DateFormatterTest {
     class StringFormatterSpeedTest extends SpeedTest {
         @Override
         IntFunction<String> run() {
-            return i -> String.format("%tF", new Date());
+            return i -> String.format("%tF %<tT", new Date());
         }
     }
 
@@ -91,12 +100,12 @@ public class DateFormatterTest {
     }
 
     public void go() {
-        int end = 10;
-        new SimpleDateFormatterThreadTest().exec(end);
-        new DateTimeFormatterThreadTest().exec(end);
+        int count = 20;
+        new SimpleDateFormatThreadTest().exec(count);
+        new DateTimeFormatterThreadTest().exec(count);
 
         int repeat = 100;
-        new SimpleDateFormatterSpeedTest().exec(repeat);
+        new SimpleDateFormatSpeedTest().exec(repeat);
         new DateTimeFormatterSpeedTest().exec(repeat);
         new StringFormatterSpeedTest().exec(repeat);
     }
